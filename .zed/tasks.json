@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Ejecutar Máquina de Turing",
+    "command": "mvn",
+    "args": ["compile", "exec:java"],
+    "reveal": "always"
+  },
+  {
+    "label": "Ejecutar con Java directo",
+    "command": "java",
+    "args": ["-cp", "target/classes", "turing.Turing"],
+    "reveal": "always"
+  }
+]

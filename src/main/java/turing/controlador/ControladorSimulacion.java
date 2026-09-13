@@ -152,7 +152,7 @@ public final class ControladorSimulacion {
         MaquinaTuring maquina = motor.getMaquina();
         cinta.mostrar(maquina.getCinta());
         estado.mostrar(maquina.getEstadoActual(), maquina.getNumeroPasos(),
-                maquina.getCinta().getPosicionCabezal(), ultimaTransicion, mensaje);
+                maquina.getCinta().getPosicionCabezal(), ultimaTransicion, mensaje, motor.getCadenaInicial());
     }
 
     private void realizarAccion(Runnable accion) {

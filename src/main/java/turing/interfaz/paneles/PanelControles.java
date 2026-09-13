@@ -1,11 +1,10 @@
 package turing.interfaz.paneles;
 
-import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.ActionListener;
-import java.util.Hashtable;
-import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -22,38 +21,70 @@ public final class PanelControles extends JPanel {
     private final JLabel etiquetaIntervalo = new JLabel();
 
     public PanelControles() {
-        super(new BorderLayout(16, 0));
-        setBorder(BorderFactory.createTitledBorder("Ejecución"));
-        JPanel botones = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 12));
-        botones.add(botonPaso);
-        botones.add(botonEjecutar);
-        botones.add(botonPausar);
-        botones.add(botonReiniciar);
+        setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+        JButton[] botones = {botonPaso, botonEjecutar, botonPausar, botonReiniciar};
+        int ancho = 100;
+        int alto = 34;
+        for (JButton boton : botones) {
+            boton.setFont(boton.getFont().deriveFont(Font.PLAIN, 13f));
+            ancho = Math.max(ancho, boton.getPreferredSize().width);
+            alto = Math.max(alto, boton.getPreferredSize().height);
+        }
+        Dimension tamano = new Dimension(ancho, alto);
+        for (int indice = 0; indice < botones.length; indice++) {
+            if (indice > 0) {
+                add(Box.createHorizontalStrut(indice == 3 ? 24 : 8));
+            }
+            JButton boton = botones[indice];
+            boton.setPreferredSize(tamano);
+            boton.setMinimumSize(tamano);
+            boton.setMaximumSize(tamano);
+            add(boton);
+        }
+
         botonPaso.setToolTipText("Aplica exactamente una transición de la máquina.");
         botonEjecutar.setToolTipText("Continúa automáticamente hasta aceptar o rechazar.");
-        botonPausar.setToolTipText("Detiene el temporizador y conserva el estado de la máquina.");
+        botonPausar.setToolTipText("Pausa la ejecución sin perder el paso actual.");
         botonReiniciar.setToolTipText("Vuelve a la entrada original y borra el historial.");
-        add(botones, BorderLayout.WEST);
+        botonPaso.setMnemonic('P');
+        botonEjecutar.setMnemonic('E');
+        botonPausar.setMnemonic('A');
+        botonReiniciar.setMnemonic('R');
 
-        JPanel panelVelocidad = new JPanel(new BorderLayout(0, 0));
-        panelVelocidad.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
-        velocidad.setPreferredSize(new Dimension(270, 40));
+        add(Box.createHorizontalStrut(24));
+        add(Box.createHorizontalGlue());
+        JLabel etiquetaVelocidad = new JLabel("Velocidad:");
+        etiquetaVelocidad.setFont(etiquetaVelocidad.getFont().deriveFont(Font.PLAIN, 13f));
+        etiquetaVelocidad.setLabelFor(velocidad);
+        add(etiquetaVelocidad);
+        add(Box.createHorizontalStrut(8));
+
         velocidad.getAccessibleContext().setAccessibleName("Intervalo en milisegundos entre pasos");
-        Hashtable<Integer, JLabel> etiquetas = new Hashtable<>();
-        etiquetas.put(50, new JLabel("Rápido"));
-        etiquetas.put(1500, new JLabel("Lento"));
-        velocidad.setLabelTable(etiquetas);
-        velocidad.setPaintLabels(true);
+        velocidad.setOpaque(false);
+        velocidad.setToolTipText("Tiempo entre pasos: 50 ms (más rápido) a 1500 ms (más lento).");
+        Dimension tamanoVelocidad = new Dimension(140, velocidad.getPreferredSize().height);
+        velocidad.setPreferredSize(tamanoVelocidad);
+        velocidad.setMinimumSize(tamanoVelocidad);
+        velocidad.setMaximumSize(tamanoVelocidad);
         velocidad.addChangeListener(evento -> actualizarIntervalo());
-        panelVelocidad.add(etiquetaIntervalo, BorderLayout.NORTH);
-        panelVelocidad.add(velocidad, BorderLayout.CENTER);
-        add(panelVelocidad, BorderLayout.CENTER);
+        add(velocidad);
+        add(Box.createHorizontalStrut(8));
+
+        etiquetaIntervalo.setFont(etiquetaIntervalo.getFont().deriveFont(Font.PLAIN, 12f));
+        Dimension tamanoIntervalo = new Dimension(
+                etiquetaIntervalo.getFontMetrics(etiquetaIntervalo.getFont()).stringWidth("1500 ms"),
+                etiquetaIntervalo.getFontMetrics(etiquetaIntervalo.getFont()).getHeight());
+        etiquetaIntervalo.setPreferredSize(tamanoIntervalo);
+        etiquetaIntervalo.setMinimumSize(tamanoIntervalo);
+        etiquetaIntervalo.setMaximumSize(tamanoIntervalo);
+        add(etiquetaIntervalo);
+
         actualizarIntervalo();
         actualizarDisponibilidad(false, false, false);
     }
 
     private void actualizarIntervalo() {
-        etiquetaIntervalo.setText("Intervalo: " + velocidad.getValue() + " ms por paso");
+        etiquetaIntervalo.setText(velocidad.getValue() + " ms");
     }
 
     public void alPaso(ActionListener accion) {

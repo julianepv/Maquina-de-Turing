@@ -1,41 +1,68 @@
 package turing.interfaz.paneles;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Insets;
 import java.awt.event.ActionListener;
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
-/** Recoge la entrada; la validación corresponde al controlador y al validador. */
+/** Recoge la entrada; la validación corresponde al motor y al validador. */
 public final class PanelEntrada extends JPanel {
-    private final JTextField campoCadena = new JTextField(28);
-    private final JButton botonCargar = new JButton("Cargar cadena");
+    private static final String EJEMPLOS = "Ejemplos: ab · aabb · aaabbb";
+    private final JTextField campoCadena = new JTextField(30);
+    private final JButton botonCargar = new JButton("Cargar");
+    private final JLabel ayuda = new JLabel(EJEMPLOS);
 
     public PanelEntrada() {
-        super(new BorderLayout(12, 8));
-        setBorder(BorderFactory.createTitledBorder("Entrada · L = {aⁿbⁿ | n ≥ 1}"));
-
-        JLabel etiqueta = new JLabel("Cadena:");
+        super(new BorderLayout(0, 8));
+        JLabel etiqueta = new JLabel("Cadena");
+        etiqueta.setFont(etiqueta.getFont().deriveFont(Font.PLAIN, 14f));
         etiqueta.setLabelFor(campoCadena);
-        campoCadena.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 19));
-        campoCadena.setToolTipText("Escribe únicamente a y b. Pulsa Enter para cargar.");
+        add(etiqueta, BorderLayout.NORTH);
+
+        campoCadena.setFont(campoCadena.getFont().deriveFont(Font.PLAIN, 16f));
+        campoCadena.setMargin(new Insets(4, 8, 4, 8));
+        campoCadena.setToolTipText("Escribe a y b. Pulsa Enter para cargar.");
         campoCadena.getAccessibleContext().setAccessibleName("Cadena de entrada");
+        campoCadena.setMinimumSize(new Dimension(0, campoCadena.getPreferredSize().height));
+        botonCargar.setFont(botonCargar.getFont().deriveFont(Font.PLAIN, 13f));
+        botonCargar.setPreferredSize(new Dimension(
+                Math.max(100, botonCargar.getPreferredSize().width),
+                Math.max(34, botonCargar.getPreferredSize().height)));
+        botonCargar.setToolTipText("Carga la cadena en la cinta e inicializa la máquina en q0.");
         botonCargar.setMnemonic('C');
 
-        JPanel formulario = new JPanel(new BorderLayout(10, 0));
-        formulario.add(etiqueta, BorderLayout.WEST);
-        formulario.add(campoCadena, BorderLayout.CENTER);
-        formulario.add(botonCargar, BorderLayout.EAST);
-        add(formulario, BorderLayout.CENTER);
+        JPanel campoYCarga = new JPanel(new BorderLayout(12, 0));
+        campoYCarga.add(campoCadena, BorderLayout.CENTER);
+        campoYCarga.add(botonCargar, BorderLayout.EAST);
+        add(campoYCarga, BorderLayout.CENTER);
 
-        JLabel ayuda = new JLabel(
-                "Ejemplos: ab, aabb, aaabbb, aaaabbbb. Solo se admiten a y b; n debe ser al menos 1.");
-        ayuda.setForeground(new Color(75, 85, 99));
+        ayuda.setFont(ayuda.getFont().deriveFont(Font.PLAIN, 12f));
+        ayuda.setMinimumSize(new Dimension(0, ayuda.getPreferredSize().height));
+        ayuda.getAccessibleContext().setAccessibleName("Ayuda de entrada");
         add(ayuda, BorderLayout.SOUTH);
+        campoCadena.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent evento) {
+                limpiarError();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent evento) {
+                limpiarError();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent evento) {
+                limpiarError();
+            }
+        });
     }
 
     public String getCadena() {
@@ -47,12 +74,14 @@ public final class PanelEntrada extends JPanel {
     }
 
     public void alCargar(ActionListener accion) {
-        botonCargar.addActionListener(accion);
-        campoCadena.addActionListener(evento -> {
+        ActionListener cargar = evento -> {
             if (botonCargar.isEnabled()) {
+                limpiarError();
                 accion.actionPerformed(evento);
             }
-        });
+        };
+        botonCargar.addActionListener(cargar);
+        campoCadena.addActionListener(cargar);
     }
 
     public void setEdicionHabilitada(boolean habilitada) {
@@ -63,5 +92,18 @@ public final class PanelEntrada extends JPanel {
     public void enfocarEntrada() {
         campoCadena.requestFocusInWindow();
         campoCadena.selectAll();
+    }
+
+    public void mostrarError(String mensaje) {
+        ayuda.setText(mensaje);
+        ayuda.setToolTipText(mensaje);
+        campoCadena.getAccessibleContext().setAccessibleDescription(mensaje);
+        enfocarEntrada();
+    }
+
+    private void limpiarError() {
+        ayuda.setText(EJEMPLOS);
+        ayuda.setToolTipText(null);
+        campoCadena.getAccessibleContext().setAccessibleDescription(null);
     }
 }
