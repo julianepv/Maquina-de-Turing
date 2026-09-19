@@ -2,6 +2,9 @@ package turing.interfaz.paneles;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,17 +21,19 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import turing.interfaz.componentes.TablaTransiciones;
 import turing.modelo.cinta.Simbolo;
+import turing.modelo.maquina.Estado;
 import turing.simulacion.ResultadoPaso;
 
 /** Matriz visual de δ, organizada por estado y símbolo leído. */
 public final class PanelTransiciones extends JPanel {
     private static final Color RESALTADO_DERECHA = new Color(195, 235, 205);
-    private static final Color RESALTADO_IZQUIERDA = new Color(255, 225, 175);
     private static final Color RESALTADO_ERROR = new Color(255, 195, 195);
+    private static final String TRANSICION_AUSENTE = "-";
     private static final Pattern IZQUIERDA = Pattern.compile(
             "(?:δ\\s*)?\\(\\s*([A-Za-z][A-Za-z0-9_]*)\\s*,\\s*([abXYB□])\\s*\\)");
     private static final Pattern DERECHA = Pattern.compile(
             "\\(\\s*([A-Za-z][A-Za-z0-9_]*)\\s*,\\s*([abXYB□])\\s*,\\s*([LRlr])\\s*\\)");
+    private static final Pattern ESTADO_NUMERADO = Pattern.compile("^(.*?)(\\d+)$");
 
     private final DefaultTableModel modelo = new DefaultTableModel(
         new String[] { "Estados", "a", "b", "X", "Y", "B" }, 0
@@ -73,7 +78,7 @@ public final class PanelTransiciones extends JPanel {
         String estado = izquierda.group(1);
         int columna = columnaDe(izquierda.group(2));
         int fila = filaDe(estado);
-        if (modelo.getValueAt(fila, columna) != null) {
+        if (!TRANSICION_AUSENTE.equals(modelo.getValueAt(fila, columna))) {
             throw new IllegalArgumentException("Ya existe una transición para δ(" + estado + ", "
                     + izquierda.group(2) + ").");
         }
@@ -82,6 +87,16 @@ public final class PanelTransiciones extends JPanel {
         String movimiento = derecha.group(3).toUpperCase();
         modelo.setValueAt("(" + derecha.group(1) + ", " + simboloEscrito + ", " + movimiento + ")",
                 fila, columna);
+        filaDe(derecha.group(1));
+        ordenarFilas();
+    }
+
+    /** Muestra estados sin transiciones salientes, incluidos los estados finales. */
+    public void asegurarFilas(Collection<Estado> estados) {
+        for (Estado estado : estados) {
+            filaDe(estado.toString());
+        }
+        ordenarFilas();
     }
 
     /** Sustituye la matriz por las reglas importadas de un archivo validado. */
@@ -111,13 +126,28 @@ public final class PanelTransiciones extends JPanel {
         }
         filaResaltada = fila;
         columnaResaltada = columnaDe(paso.simboloLeido());
-        colorResaltado = paso.direccion() == null
-                ? RESALTADO_ERROR
-                : paso.direccion().getDesplazamiento() > 0
-                        ? RESALTADO_DERECHA : RESALTADO_IZQUIERDA;
+        colorResaltado = paso.direccion() == null ? RESALTADO_ERROR : RESALTADO_DERECHA;
         modelo.fireTableCellUpdated(filaResaltada, columnaResaltada);
+        desplazarHasta(filaResaltada, columnaResaltada);
+    }
+
+    /** Resalta la transición que corresponde a la configuración actual de la máquina. */
+    public void resaltarConfiguracion(Estado estado, Simbolo simbolo) {
+        limpiarResaltado();
+        Integer fila = filasPorEstado.get(estado.toString());
+        if (fila == null) {
+            return;
+        }
+        filaResaltada = fila;
+        columnaResaltada = columnaDe(simbolo);
+        colorResaltado = RESALTADO_DERECHA;
+        modelo.fireTableCellUpdated(filaResaltada, columnaResaltada);
+        desplazarHasta(filaResaltada, columnaResaltada);
+    }
+
+    private void desplazarHasta(int fila, int columna) {
         SwingUtilities.invokeLater(() -> tabla.scrollRectToVisible(
-                tabla.getCellRect(filaResaltada, columnaResaltada, true)));
+                tabla.getCellRect(fila, columna, true)));
     }
 
     public void limpiarResaltado() {
@@ -138,9 +168,54 @@ public final class PanelTransiciones extends JPanel {
             return existente;
         }
         int nuevaFila = modelo.getRowCount();
-        modelo.addRow(new Object[] { estado, null, null, null, null, null });
+        modelo.addRow(new Object[] { estado, TRANSICION_AUSENTE, TRANSICION_AUSENTE,
+                TRANSICION_AUSENTE, TRANSICION_AUSENTE, TRANSICION_AUSENTE });
         filasPorEstado.put(estado, nuevaFila);
         return nuevaFila;
+    }
+
+    /** Ordena q0, q1, q2... antes de los nombres no numéricos como qf. */
+    private void ordenarFilas() {
+        if (modelo.getRowCount() < 2) {
+            return;
+        }
+        limpiarResaltado();
+        Object[][] filas = new Object[modelo.getRowCount()][modelo.getColumnCount()];
+        for (int fila = 0; fila < modelo.getRowCount(); fila++) {
+            for (int columna = 0; columna < modelo.getColumnCount(); columna++) {
+                filas[fila][columna] = modelo.getValueAt(fila, columna);
+            }
+        }
+        Arrays.sort(filas, Comparator.comparing(fila -> fila[0].toString(),
+                this::compararEstados));
+
+        modelo.setRowCount(0);
+        filasPorEstado.clear();
+        for (Object[] fila : filas) {
+            int indice = modelo.getRowCount();
+            modelo.addRow(fila);
+            filasPorEstado.put(fila[0].toString(), indice);
+        }
+    }
+
+    private int compararEstados(String primero, String segundo) {
+        Matcher primeroNumerado = ESTADO_NUMERADO.matcher(primero);
+        Matcher segundoNumerado = ESTADO_NUMERADO.matcher(segundo);
+        if (primeroNumerado.matches() && segundoNumerado.matches()
+                && primeroNumerado.group(1).equals(segundoNumerado.group(1))) {
+            int comparacionNumerica = compararNumeros(primeroNumerado.group(2),
+                    segundoNumerado.group(2));
+            return comparacionNumerica != 0 ? comparacionNumerica : primero.compareTo(segundo);
+        }
+        return primero.compareTo(segundo);
+    }
+
+    private int compararNumeros(String primero, String segundo) {
+        String primeroSinCeros = primero.replaceFirst("^0+(?!$)", "");
+        String segundoSinCeros = segundo.replaceFirst("^0+(?!$)", "");
+        int comparacionLongitud = Integer.compare(primeroSinCeros.length(), segundoSinCeros.length());
+        return comparacionLongitud != 0
+                ? comparacionLongitud : primeroSinCeros.compareTo(segundoSinCeros);
     }
 
     private int columnaDe(String simbolo) {

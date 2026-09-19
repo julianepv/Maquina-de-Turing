@@ -11,7 +11,8 @@ import turing.modelo.maquina.Estado;
 import turing.modelo.maquina.Transicion;
 
 /** Convierte el texto escrito por la persona usuaria en una tabla determinista. */
-public record ConfiguracionMaquina(TablaTransiciones tabla, Estado estadoInicial) {
+public record ConfiguracionMaquina(TablaTransiciones tabla, Estado estadoInicial,
+        Set<Estado> estadosAceptacion) {
     private static final Set<String> SIMBOLOS_VALIDOS = Set.of("a", "b", "X", "Y", "B", "□");
 
     public static ConfiguracionMaquina desde(String textoInicial, String textoAceptacion,
@@ -44,7 +45,10 @@ public record ConfiguracionMaquina(TablaTransiciones tabla, Estado estadoInicial
         if (tabla.getTransiciones().isEmpty()) {
             throw new IllegalArgumentException("Ingresa al menos una transición.");
         }
-        return new ConfiguracionMaquina(tabla, estadoInicial);
+        Set<Estado> estadosFinales = aceptacion.stream()
+                .map(nombre -> obtenerEstado(estados, nombre, aceptacion))
+                .collect(Collectors.toUnmodifiableSet());
+        return new ConfiguracionMaquina(tabla, estadoInicial, estadosFinales);
     }
 
     private static void registrarLinea(TablaTransiciones tabla, Map<String, Estado> estados,

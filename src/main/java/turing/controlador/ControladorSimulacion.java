@@ -138,6 +138,7 @@ public final class ControladorSimulacion {
         // El motor valida antes de sustituir una simulación que ya estuviera cargada.
         ConfiguracionMaquina configuracion = ConfiguracionMaquina.desde(entrada.getEstadoInicial(),
                 entrada.getEstadosAceptacion(), entrada.getTransiciones());
+        transiciones.asegurarFilas(configuracion.estadosAceptacion());
         motor.cargar(entrada.getCadena(), configuracion);
         prepararInicio("Programa y cadena cargados. Pulsa Paso o Ejecutar.");
     }
@@ -153,7 +154,11 @@ public final class ControladorSimulacion {
     private void avanzar() {
         ResultadoPaso paso = motor.paso();
         ultimaTransicion = paso.notacion();
-        transiciones.resaltar(paso);
+        if (paso.direccion() == null) {
+            transiciones.resaltar(paso);
+        } else {
+            resaltarConfiguracionActual();
+        }
 
         String mensaje;
         if (paso.estadoNuevo().esAceptar()) {
@@ -182,7 +187,16 @@ public final class ControladorSimulacion {
         ultimaTransicion = "Todavía no se ha ejecutado una transición.";
         transiciones.limpiarResaltado();
         actualizarVista(mensaje);
+        resaltarConfiguracionActual();
         entrada.enfocarEntrada();
+    }
+
+    private void resaltarConfiguracionActual() {
+        if (!motor.hayCadenaCargada()) {
+            return;
+        }
+        MaquinaTuring maquina = motor.getMaquina();
+        transiciones.resaltarConfiguracion(maquina.getEstadoActual(), maquina.getCinta().leer());
     }
 
     private void comprobarPuedeAvanzar() {
@@ -209,7 +223,7 @@ public final class ControladorSimulacion {
         MaquinaTuring maquina = motor.getMaquina();
         cinta.mostrar(maquina.getCinta());
         estado.mostrar(maquina.getEstadoActual(), maquina.getNumeroPasos(),
-                maquina.getCinta().getPosicionCabezal(), ultimaTransicion, mensaje, motor.getCadenaInicial());
+                maquina.getCinta().getPosicionCabezal(), ultimaTransicion, mensaje);
     }
 
     private void realizarAccion(Runnable accion) {

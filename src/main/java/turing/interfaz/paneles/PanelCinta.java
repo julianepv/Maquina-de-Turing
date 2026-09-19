@@ -81,17 +81,17 @@ public final class PanelCinta extends JPanel {
                 cinta.leer(cinta.getPosicionCabezal())
         );
 
-        int limiteIzq = cinta.getLimiteIzquierdo();
-        int limiteDer = cinta.getLimiteDerecho();
-        int minIdx = Math.min(-1, limiteIzq - 1);
-        int maxIdx = Math.max(7, limiteDer + 1);
+        // La cinta ya ofrece un blanco de margen a cada lado del área visitada.
+        // No se fuerzan celdas adicionales: distraen de la cadena y del cabezal.
+        int minIdx = cinta.getLimiteIzquierdo();
+        int maxIdx = cinta.getLimiteDerecho();
         int totalNecesarias = maxIdx - minIdx + 1;
 
         int numCeldas;
         int inicioIndice;
 
         if (totalNecesarias <= MAX_CELDAS) {
-            numCeldas = Math.max(9, totalNecesarias);
+            numCeldas = totalNecesarias;
             inicioIndice = minIdx;
         } else {
             numCeldas = MAX_CELDAS;

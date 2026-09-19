@@ -52,8 +52,9 @@ vez; la aplicación empaquetada no requiere bibliotecas externas.
 La cinta muestra `B` para los blancos. Los símbolos permitidos en las reglas son
 `a`, `b`, `X`, `Y` y `B`; la cadena inicial conserva el alfabeto de entrada `a/b`.
 La celda del cabezal tiene una flecha y los índices permiten seguir su posición.
-La matriz δ se sincroniza con la cinta: verde indica movimiento a la derecha,
-naranja a la izquierda y rojo una transición ausente.
+La matriz δ se sincroniza con la configuración actual: la celda verde corresponde
+al estado y símbolo bajo el cabezal antes del siguiente paso; rojo indica una
+transición ausente. Los guiones representan transiciones no definidas.
 
 | Entrada | Resultado esperado |
 | --- | --- |
