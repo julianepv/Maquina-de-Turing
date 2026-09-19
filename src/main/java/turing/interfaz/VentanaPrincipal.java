@@ -37,7 +37,7 @@ public final class VentanaPrincipal extends JFrame {
 
     private void inicializarVentana() {
         setTitle("Máquina de Turing: Laboratorio #3");
-        setSize(1030, 755);
+        setSize(1030, 930);
         setResizable(false);
         setLayout(null);
         getContentPane().setBackground(Color.WHITE);
@@ -58,7 +58,7 @@ public final class VentanaPrincipal extends JFrame {
             10,
             60,
             1010,
-            650,
+            825,
             Color.WHITE,
             Color.BLACK,
             2
@@ -93,25 +93,25 @@ public final class VentanaPrincipal extends JFrame {
     }
 
     private void colocarComponentes() {
-        panelEntrada.setBounds(20, 16, 970, 60);
+        panelEntrada.setBounds(20, 16, 970, 175);
         panelCuerpo.add(panelEntrada);
 
-        panelCinta.setBounds(20, 84, 970, 160);
+        panelCinta.setBounds(20, 201, 970, 160);
         panelCuerpo.add(panelCinta);
 
-        panelEstado.setBounds(20, 254, 970, 105);
+        panelEstado.setBounds(20, 371, 970, 105);
         panelCuerpo.add(panelEstado);
 
-        panelControles.setBounds(20, 372, 970, 42);
+        panelControles.setBounds(20, 489, 970, 42);
         panelCuerpo.add(panelControles);
 
-        JLabel etiquetaTransiciones = new JLabel("Transiciones");
-        etiquetaTransiciones.setBounds(20, 423, 200, 22);
+        JLabel etiquetaTransiciones = new JLabel("Tabla de transiciones δ");
+        etiquetaTransiciones.setBounds(20, 540, 250, 22);
         etiquetaTransiciones.setFont(new Font("Tahoma", Font.BOLD, 15));
         etiquetaTransiciones.setForeground(Color.BLACK);
         panelCuerpo.add(etiquetaTransiciones);
 
-        panelTransiciones.setBounds(20, 448, 970, 178);
+        panelTransiciones.setBounds(20, 565, 970, 245);
         panelCuerpo.add(panelTransiciones);
     }
 

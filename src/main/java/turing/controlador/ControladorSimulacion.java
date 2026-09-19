@@ -1,8 +1,13 @@
 package turing.controlador;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import javax.swing.JFileChooser;
 import javax.swing.Timer;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import turing.interfaz.VentanaPrincipal;
 import turing.interfaz.paneles.PanelCinta;
 import turing.interfaz.paneles.PanelControles;
@@ -10,6 +15,8 @@ import turing.interfaz.paneles.PanelEntrada;
 import turing.interfaz.paneles.PanelEstado;
 import turing.interfaz.paneles.PanelTransiciones;
 import turing.modelo.maquina.Estado;
+import turing.reglas.ConfiguracionMaquina;
+import turing.reglas.LectorArchivoTransiciones;
 import turing.simulacion.MaquinaTuring;
 import turing.simulacion.MotorSimulacion;
 import turing.simulacion.ResultadoPaso;
@@ -67,6 +74,8 @@ public final class ControladorSimulacion {
 
     private void conectarEventos() {
         entrada.alCargar(evento -> realizarAccion(this::cargar));
+        entrada.alAgregarTransicion(evento -> realizarAccion(this::agregarTransicion));
+        entrada.alCargarArchivo(evento -> realizarAccion(this::cargarArchivo));
         controles.alPaso(evento -> realizarAccion(() -> {
             comprobarPuedeAvanzar();
             if (!temporizador.isRunning()) {
@@ -81,11 +90,56 @@ public final class ControladorSimulacion {
         controles.alReiniciar(evento -> realizarAccion(this::reiniciar));
     }
 
+    private void agregarTransicion() {
+        transiciones.agregarRegla(entrada.getDeltaActual(), entrada.getMovimientoActual());
+        entrada.confirmarTransicionActual();
+        invalidarSimulacionPorCambioDeReglas();
+    }
+
+    private void cargarArchivo() {
+        JFileChooser selector = new JFileChooser();
+        selector.setDialogTitle("Cargar transiciones desde un archivo .txt");
+        selector.setFileFilter(new FileNameExtensionFilter("Archivos de texto (*.txt)", "txt"));
+        if (selector.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        Path archivo = selector.getSelectedFile().toPath();
+        if (!archivo.getFileName().toString().toLowerCase().endsWith(".txt")) {
+            throw new IllegalArgumentException("Selecciona un archivo con extensión .txt.");
+        }
+
+        List<String> reglas;
+        try {
+            reglas = LectorArchivoTransiciones.leer(archivo);
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("No se pudo leer el archivo de transiciones.");
+        }
+
+        // Se valida todo antes de alterar la tabla visible o la simulación existente.
+        ConfiguracionMaquina.desde(entrada.getEstadoInicial(), entrada.getEstadosAceptacion(),
+                String.join("\n", reglas));
+        transiciones.reemplazarReglas(reglas);
+        entrada.reemplazarTransiciones(reglas);
+        invalidarSimulacionPorCambioDeReglas();
+    }
+
+    private void invalidarSimulacionPorCambioDeReglas() {
+        if (motor.hayCadenaCargada()) {
+            detener();
+            motor.limpiar();
+            ultimaTransicion = "Todavía no se ha ejecutado una transición.";
+            actualizarVista("Las transiciones cambiaron. Pulsa Cargar para iniciar la nueva simulación.");
+        }
+    }
+
     private void cargar() {
         detener();
         // El motor valida antes de sustituir una simulación que ya estuviera cargada.
-        motor.cargar(entrada.getCadena());
-        prepararInicio("Cadena cargada. Pulsa Paso o Ejecutar.");
+        ConfiguracionMaquina configuracion = ConfiguracionMaquina.desde(entrada.getEstadoInicial(),
+                entrada.getEstadosAceptacion(), entrada.getTransiciones());
+        motor.cargar(entrada.getCadena(), configuracion);
+        prepararInicio("Programa y cadena cargados. Pulsa Paso o Ejecutar.");
     }
 
     private void ejecutar() {
@@ -99,13 +153,13 @@ public final class ControladorSimulacion {
     private void avanzar() {
         ResultadoPaso paso = motor.paso();
         ultimaTransicion = paso.notacion();
-        transiciones.agregar(paso);
+        transiciones.resaltar(paso);
 
         String mensaje;
-        if (paso.estadoNuevo() == Estado.ACEPTAR) {
+        if (paso.estadoNuevo().esAceptar()) {
             detener();
-            mensaje = "Cadena aceptada: pertenece a L = {aⁿbⁿ | n ≥ 1}.";
-        } else if (paso.estadoNuevo() == Estado.RECHAZAR) {
+            mensaje = "Cadena aceptada: llegó al estado de aceptación configurado.";
+        } else if (paso.estadoNuevo().esFinal()) {
             detener();
             mensaje = "Cadena rechazada: no existe una transición para δ("
                     + paso.estadoAnterior() + ", " + paso.simboloLeido() + ").";
@@ -121,12 +175,12 @@ public final class ControladorSimulacion {
         detener();
         motor.reiniciar();
         entrada.setCadena(motor.getCadenaInicial());
-        prepararInicio("Simulación reiniciada con la cadena original. La tabla de transiciones está vacía.");
+        prepararInicio("Simulación reiniciada con la cadena original y las mismas transiciones.");
     }
 
     private void prepararInicio(String mensaje) {
         ultimaTransicion = "Todavía no se ha ejecutado una transición.";
-        transiciones.limpiar();
+        transiciones.limpiarResaltado();
         actualizarVista(mensaje);
         entrada.enfocarEntrada();
     }

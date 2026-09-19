@@ -96,7 +96,7 @@ public final class PanelEstado extends JPanel {
         descripcion.setText(estado.getDescripcion());
 
         if (estado.esFinal()) {
-            boolean aceptada = estado == Estado.ACEPTAR;
+            boolean aceptada = estado.esAceptar();
             etiquetaResultado.setText(aceptada ? "✓ Cadena aceptada" : "✕ Cadena rechazada");
             etiquetaResultado.setForeground(aceptada ? new Color(0, 130, 40) : new Color(190, 0, 0));
         } else {

@@ -14,4 +14,12 @@ public enum Direccion {
     public int getDesplazamiento() {
         return desplazamiento;
     }
+
+    public static Direccion desdeTexto(String texto) {
+        try {
+            return valueOf(texto.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("La dirección debe ser L o R.");
+        }
+    }
 }

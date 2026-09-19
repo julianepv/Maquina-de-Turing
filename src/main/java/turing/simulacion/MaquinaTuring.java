@@ -20,8 +20,16 @@ public final class MaquinaTuring {
     }
 
     public MaquinaTuring(String cadena, TablaTransiciones tabla) {
+        this(cadena, tabla, Estado.Q0);
+    }
+
+    public MaquinaTuring(String cadena, TablaTransiciones tabla, Estado estadoInicial) {
         this.cinta = new Cinta(cadena);
         this.tabla = Objects.requireNonNull(tabla, "La tabla de transiciones es obligatoria.");
+        this.estadoActual = Objects.requireNonNull(estadoInicial, "El estado inicial es obligatorio.");
+        if (estadoInicial.esFinal()) {
+            throw new IllegalArgumentException("El estado inicial no puede ser final.");
+        }
     }
 
     public ResultadoPaso paso() {
