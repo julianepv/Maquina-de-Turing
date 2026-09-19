@@ -8,7 +8,7 @@ import turing.interfaz.paneles.PanelCinta;
 import turing.interfaz.paneles.PanelControles;
 import turing.interfaz.paneles.PanelEntrada;
 import turing.interfaz.paneles.PanelEstado;
-import turing.interfaz.paneles.PanelHistorial;
+import turing.interfaz.paneles.PanelTransiciones;
 import turing.modelo.maquina.Estado;
 import turing.simulacion.MaquinaTuring;
 import turing.simulacion.MotorSimulacion;
@@ -16,19 +16,21 @@ import turing.simulacion.ResultadoPaso;
 
 /** Traduce los eventos de Swing en operaciones del motor y actualiza la vista. */
 public final class ControladorSimulacion {
+    private static final int RETARDO_SIMULACION_MS = 700;
+
     private final MotorSimulacion motor;
     private final PanelEntrada entrada;
     private final PanelControles controles;
     private final PanelCinta cinta;
     private final PanelEstado estado;
-    private final PanelHistorial historial;
+    private final PanelTransiciones transiciones;
     private final Consumer<String> mostrarError;
     private final Timer temporizador;
     private String ultimaTransicion = "Todavía no se ha ejecutado una transición.";
 
     public ControladorSimulacion(VentanaPrincipal ventana) {
         this(new MotorSimulacion(), ventana.getPanelEntrada(), ventana.getPanelControles(),
-                ventana.getPanelCinta(), ventana.getPanelEstado(), ventana.getPanelHistorial(),
+                ventana.getPanelCinta(), ventana.getPanelEstado(), ventana.getPanelTransiciones(),
                 ventana::mostrarError);
         ventana.alCerrar(this::detener);
     }
@@ -36,18 +38,24 @@ public final class ControladorSimulacion {
     /** Recibe los paneles por separado para poder probar la interacción sin abrir una ventana. */
     public ControladorSimulacion(MotorSimulacion motor, PanelEntrada entrada,
             PanelControles controles, PanelCinta cinta, PanelEstado estado,
-            PanelHistorial historial, Consumer<String> mostrarError) {
+            PanelTransiciones transiciones, Consumer<String> mostrarError) {
+        this(motor, entrada, controles, cinta, estado, transiciones, mostrarError, RETARDO_SIMULACION_MS);
+    }
+
+    ControladorSimulacion(MotorSimulacion motor, PanelEntrada entrada,
+            PanelControles controles, PanelCinta cinta, PanelEstado estado,
+            PanelTransiciones transiciones, Consumer<String> mostrarError, int retardoMilisegundos) {
         this.motor = Objects.requireNonNull(motor);
         this.entrada = Objects.requireNonNull(entrada);
         this.controles = Objects.requireNonNull(controles);
         this.cinta = Objects.requireNonNull(cinta);
         this.estado = Objects.requireNonNull(estado);
-        this.historial = Objects.requireNonNull(historial);
+        this.transiciones = Objects.requireNonNull(transiciones);
         this.mostrarError = Objects.requireNonNull(mostrarError);
 
         // Cada tick ejecuta una sola transición en el hilo de eventos de Swing.
         // El Timer deja que la ventana responda entre pasos, sin Thread.sleep ni bucles bloqueantes.
-        temporizador = new Timer(controles.getRetardoMilisegundos(), evento -> {
+        temporizador = new Timer(retardoMilisegundos, evento -> {
             if (temporizadorEnMarcha()) {
                 realizarAccion(this::avanzar);
             }
@@ -71,11 +79,6 @@ public final class ControladorSimulacion {
             actualizarVista("Simulación pausada. Puedes avanzar un paso o continuar con Ejecutar.");
         });
         controles.alReiniciar(evento -> realizarAccion(this::reiniciar));
-        controles.alCambiarVelocidad(evento -> {
-            int retardo = controles.getRetardoMilisegundos();
-            temporizador.setDelay(retardo);
-            temporizador.setInitialDelay(retardo);
-        });
     }
 
     private void cargar() {
@@ -96,7 +99,7 @@ public final class ControladorSimulacion {
     private void avanzar() {
         ResultadoPaso paso = motor.paso();
         ultimaTransicion = paso.notacion();
-        historial.agregar(paso);
+        transiciones.agregar(paso);
 
         String mensaje;
         if (paso.estadoNuevo() == Estado.ACEPTAR) {
@@ -118,12 +121,12 @@ public final class ControladorSimulacion {
         detener();
         motor.reiniciar();
         entrada.setCadena(motor.getCadenaInicial());
-        prepararInicio("Simulación reiniciada con la cadena original. El historial está vacío.");
+        prepararInicio("Simulación reiniciada con la cadena original. La tabla de transiciones está vacía.");
     }
 
     private void prepararInicio(String mensaje) {
         ultimaTransicion = "Todavía no se ha ejecutado una transición.";
-        historial.limpiar();
+        transiciones.limpiar();
         actualizarVista(mensaje);
         entrada.enfocarEntrada();
     }
@@ -178,5 +181,9 @@ public final class ControladorSimulacion {
     /** Detiene también los ticks pendientes al cerrar la ventana. Se llama desde el hilo de Swing. */
     public void detener() {
         temporizador.stop();
+    }
+
+    int getRetardoMilisegundos() {
+        return temporizador.getDelay();
     }
 }

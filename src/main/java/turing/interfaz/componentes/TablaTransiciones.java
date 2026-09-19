@@ -7,87 +7,172 @@ import java.awt.Font;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JTable;
-import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
-import javax.swing.border.Border;
+import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 
-/** Tabla de solo lectura con el estilo compartido de las transiciones. */
+/** JTable reutilizable con estilo clásico, limpio y legible. */
 public final class TablaTransiciones extends JTable {
-    /** Los anchos son preferidos; cada titulo y su margen fijan el ancho minimo. */
-    public TablaTransiciones(TableModel modelo, int... anchos) {
+
+    private static final Color COLOR_ENCABEZADO = new Color(200, 220, 240);
+    private static final Color COLOR_FILA_PAR = new Color(240, 248, 255);
+    private static final Color COLOR_FILA_IMPAR = Color.WHITE;
+    private static final Color COLOR_SELECCION = new Color(205, 225, 245);
+    private static final Color COLOR_GRID = new Color(165, 185, 205);
+    private static final Color COLOR_TEXTO = new Color(25, 25, 25);
+
+    private static final Font FUENTE_TABLA = new Font("Arial", Font.PLAIN, 13);
+    private static final Font FUENTE_ENCABEZADO = new Font(
+        "Tahoma",
+        Font.BOLD,
+        13
+    );
+
+    public TablaTransiciones(TableModel modelo, int... anchosPreferidos) {
         super(modelo);
-        Font fuente = getFont().deriveFont(Font.PLAIN, 13f);
-        setFont(fuente);
-        setRowHeight(Math.max(30, getFontMetrics(fuente).getHeight() + 12));
+
+        configurarTabla();
+        configurarEncabezado();
+        configurarCeldas();
+        configurarColumnas(anchosPreferidos);
+    }
+
+    private void configurarTabla() {
+        setFont(FUENTE_TABLA);
+        setForeground(COLOR_TEXTO);
+        setBackground(Color.WHITE);
+        setRowHeight(29);
         setFillsViewportHeight(true);
-        setShowGrid(false);
-        setIntercellSpacing(new Dimension(0, 0));
+
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        setAutoResizeMode(AUTO_RESIZE_OFF);
+        setRowSelectionAllowed(true);
+        setColumnSelectionAllowed(false);
+        setCellSelectionEnabled(false);
+        setSelectionBackground(COLOR_SELECCION);
+        setSelectionForeground(Color.BLACK);
 
-        Color fondo = getBackground();
-        Color texto = getForeground();
-        setSelectionBackground(new Color(
-                (fondo.getRed() * 7 + texto.getRed()) / 8,
-                (fondo.getGreen() * 7 + texto.getGreen()) / 8,
-                (fondo.getBlue() * 7 + texto.getBlue()) / 8));
-        setSelectionForeground(texto);
+        setShowGrid(true);
+        setShowHorizontalLines(true);
+        setShowVerticalLines(true);
+        setGridColor(COLOR_GRID);
+        setIntercellSpacing(new Dimension(1, 1));
 
-        Border margen = BorderFactory.createEmptyBorder(0, 8, 0, 8);
-        DefaultTableCellRenderer contenido = new DefaultTableCellRenderer() {
+        setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        setPreferredScrollableViewportSize(new Dimension(1000, 180));
+    }
+
+    private void configurarEncabezado() {
+        JTableHeader encabezado = getTableHeader();
+        encabezado.setFont(FUENTE_ENCABEZADO);
+        encabezado.setBackground(COLOR_ENCABEZADO);
+        encabezado.setForeground(new Color(35, 35, 35));
+        encabezado.setReorderingAllowed(false);
+        encabezado.setResizingAllowed(true);
+        encabezado.setPreferredSize(
+            new Dimension(encabezado.getPreferredSize().width, 31)
+        );
+
+        DefaultTableCellRenderer rendererEncabezado =
+            new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(
+                    JTable table,
+                    Object value,
+                    boolean isSelected,
+                    boolean hasFocus,
+                    int row,
+                    int column
+                ) {
+                    JLabel etiqueta =
+                        (JLabel) super.getTableCellRendererComponent(
+                            table,
+                            value,
+                            isSelected,
+                            hasFocus,
+                            row,
+                            column
+                        );
+
+                    etiqueta.setHorizontalAlignment(SwingConstants.CENTER);
+                    etiqueta.setFont(FUENTE_ENCABEZADO);
+                    etiqueta.setBackground(COLOR_ENCABEZADO);
+                    etiqueta.setForeground(new Color(35, 35, 35));
+                    etiqueta.setOpaque(true);
+                    etiqueta.setBorder(
+                        BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(
+                                0,
+                                0,
+                                1,
+                                1,
+                                COLOR_GRID
+                            ),
+                            BorderFactory.createEmptyBorder(3, 6, 3, 6)
+                        )
+                    );
+
+                    return etiqueta;
+                }
+            };
+
+        encabezado.setDefaultRenderer(rendererEncabezado);
+    }
+
+    private void configurarCeldas() {
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable tabla, Object valor,
-                    boolean seleccionada, boolean tieneFoco, int fila, int columna) {
-                super.getTableCellRendererComponent(tabla, valor, seleccionada, tieneFoco, fila, columna);
-                setBorder(tieneFoco ? BorderFactory.createCompoundBorder(getBorder(), margen) : margen);
-                return this;
+            public Component getTableCellRendererComponent(
+                JTable table,
+                Object value,
+                boolean isSelected,
+                boolean hasFocus,
+                int row,
+                int column
+            ) {
+                JLabel etiqueta = (JLabel) super.getTableCellRendererComponent(
+                    table,
+                    value,
+                    isSelected,
+                    hasFocus,
+                    row,
+                    column
+                );
+
+                etiqueta.setHorizontalAlignment(SwingConstants.CENTER);
+                etiqueta.setFont(FUENTE_TABLA);
+                etiqueta.setForeground(COLOR_TEXTO);
+                etiqueta.setOpaque(true);
+
+                if (isSelected) {
+                    etiqueta.setBackground(COLOR_SELECCION);
+                } else {
+                    etiqueta.setBackground(
+                        row % 2 == 0 ? COLOR_FILA_PAR : COLOR_FILA_IMPAR
+                    );
+                }
+
+                etiqueta.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
+                return etiqueta;
             }
         };
-        contenido.setHorizontalAlignment(JLabel.CENTER);
 
-        JTableHeader encabezado = getTableHeader();
-        encabezado.setFont(fuente);
-        encabezado.setReorderingAllowed(false);
-        TableCellRenderer nativo = encabezado.getDefaultRenderer();
-        encabezado.setDefaultRenderer((tabla, valor, seleccionada, tieneFoco, fila, columna) -> {
-            Component componente = nativo.getTableCellRendererComponent(
-                    tabla, valor, seleccionada, tieneFoco, fila, columna);
-            componente.setFont(encabezado.getFont());
-            if (componente instanceof JLabel etiqueta) {
-                etiqueta.setHorizontalAlignment(JLabel.CENTER);
-            }
-            return componente;
-        });
+        setDefaultRenderer(Object.class, renderer);
+    }
 
+    private void configurarColumnas(int... anchosPreferidos) {
         for (int i = 0; i < getColumnCount(); i++) {
             TableColumn columna = getColumnModel().getColumn(i);
-            Component titulo = encabezado.getDefaultRenderer().getTableCellRendererComponent(
-                    this, columna.getHeaderValue(), false, false, -1, i);
-            int minimo = Math.max(48, titulo.getPreferredSize().width + 16);
-            int preferido = Math.max(minimo, i < anchos.length ? anchos[i] : 96);
-            columna.setMinWidth(minimo);
-            columna.setPreferredWidth(preferido);
-            columna.setWidth(preferido);
-            columna.setCellRenderer(contenido);
+            if (i < anchosPreferidos.length) {
+                columna.setPreferredWidth(anchosPreferidos[i]);
+            }
         }
-        Dimension tamanoEncabezado = encabezado.getPreferredSize();
-        tamanoEncabezado.height = Math.max(tamanoEncabezado.height,
-                Math.max(32, getFontMetrics(fuente).getHeight() + 12));
-        encabezado.setPreferredSize(tamanoEncabezado);
     }
 
     @Override
     public boolean isCellEditable(int fila, int columna) {
         return false;
-    }
-
-    @Override
-    public boolean getScrollableTracksViewportWidth() {
-        return getParent() instanceof JViewport vista && vista.getWidth() >= getPreferredSize().width;
     }
 }

@@ -1,141 +1,201 @@
 package turing.interfaz.paneles;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
+import java.awt.Color;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.Scrollable;
-import javax.swing.SwingUtilities;
+import javax.swing.SwingConstants;
+import javax.swing.border.LineBorder;
 import turing.interfaz.componentes.CeldaCinta;
 import turing.modelo.cinta.Cinta;
 import turing.modelo.cinta.Simbolo;
 
-/** Visualiza la cinta sin crear un componente por símbolo ni copiarla en cada paso. */
+/** Muestra la cinta, sus índices y la posición actual del cabezal. */
 public final class PanelCinta extends JPanel {
-    private final VistaCinta vista = new VistaCinta();
-    private final JScrollPane desplazamiento = new JScrollPane(vista,
-            JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-    private Cinta cinta;
+
+    private static final int MAX_CELDAS = 15;
+    private static final int ANCHO_PANEL = 945;
+    private static final int Y_FLECHA = 27;
+    private static final int Y_CELDA = 48;
+    private static final int Y_INDICE = 104;
+
+    private final JLabel titulo = new JLabel("Cinta");
+    private final JLabel flechaCabezal = new JLabel("▼", SwingConstants.CENTER);
+    private final CeldaCinta[] celdas = new CeldaCinta[MAX_CELDAS];
+    private final JLabel[] indices = new JLabel[MAX_CELDAS];
+    private final JLabel leyenda = new JLabel(
+        "X = a procesada      Y = b procesada      B = blanco",
+        SwingConstants.CENTER
+    );
 
     public PanelCinta() {
-        super(new BorderLayout(0, 8));
-        desplazamiento.setBorder(BorderFactory.createEmptyBorder());
-        desplazamiento.getViewport().setBackground(getBackground());
-        desplazamiento.getHorizontalScrollBar().setUnitIncrement(CeldaCinta.ANCHO);
-        int alto = CeldaCinta.ALTO + 24 + desplazamiento.getHorizontalScrollBar().getPreferredSize().height;
-        desplazamiento.setPreferredSize(new Dimension(760, alto));
-        add(desplazamiento, BorderLayout.CENTER);
+        setLayout(null);
+        setBackground(Color.WHITE);
+        setBorder(new LineBorder(Color.BLUE, 1));
+        getAccessibleContext().setAccessibleName(
+            "Cinta y posición del cabezal"
+        );
 
-        JLabel leyenda = new JLabel("X = a procesada    Y = b procesada    □ = blanco", JLabel.CENTER);
-        leyenda.setFont(leyenda.getFont().deriveFont(Font.PLAIN, 12f));
-        add(leyenda, BorderLayout.SOUTH);
-        setMinimumSize(new Dimension(200, alto + 8 + leyenda.getPreferredSize().height));
+        titulo.setBounds(10, 5, 120, 22);
+        titulo.setFont(new Font("Tahoma", Font.BOLD, 14));
+        titulo.setForeground(Color.BLACK);
+        add(titulo);
+
+        flechaCabezal.setFont(new Font("Arial", Font.BOLD, 18));
+        flechaCabezal.setForeground(Color.GREEN);
+        flechaCabezal.setVisible(false);
+        add(flechaCabezal);
+
+        Font fuenteIndice = new Font("Arial", Font.PLAIN, 11);
+        for (int i = 0; i < MAX_CELDAS; i++) {
+            CeldaCinta celda = new CeldaCinta();
+            celdas[i] = celda;
+            add(celda);
+
+            JLabel indice = new JLabel("", SwingConstants.CENTER);
+            indice.setFont(fuenteIndice);
+            indice.setForeground(new Color(75, 75, 75));
+            indices[i] = indice;
+            add(indice);
+        }
+
+        leyenda.setBounds(0, 132, ANCHO_PANEL, 22);
+        leyenda.setFont(new Font("Arial", Font.PLAIN, 12));
+        leyenda.setForeground(new Color(55, 55, 55));
+        add(leyenda);
+
         limpiar();
     }
 
-    public void mostrar(Cinta nuevaCinta) {
-        cinta = nuevaCinta;
-        vista.getAccessibleContext().setAccessibleDescription(
-                "Cabezal en la celda " + cinta.getPosicionCabezal()
-                + ", símbolo leído: " + cinta.leer(cinta.getPosicionCabezal()));
-        vista.revalidate();
-        vista.repaint();
-        // El desplazamiento se calcula después de actualizar el tamaño de la vista.
-        SwingUtilities.invokeLater(() -> {
-            if (cinta != null) {
-                int x = vista.margenHorizontal()
-                        + (cinta.getPosicionCabezal() - cinta.getLimiteIzquierdo()) * CeldaCinta.ANCHO;
-                vista.scrollRectToVisible(new Rectangle(Math.max(0, x - CeldaCinta.ANCHO),
-                        0, CeldaCinta.ANCHO * 3, CeldaCinta.ALTO));
+    public void mostrar(Cinta cinta) {
+        if (cinta == null) {
+            limpiar();
+            return;
+        }
+
+        getAccessibleContext().setAccessibleDescription(
+            "Cabezal en la celda " +
+                cinta.getPosicionCabezal() +
+                ", símbolo leído: " +
+                cinta.leer(cinta.getPosicionCabezal())
+        );
+
+        int limiteIzq = cinta.getLimiteIzquierdo();
+        int limiteDer = cinta.getLimiteDerecho();
+        int minIdx = Math.min(-1, limiteIzq - 1);
+        int maxIdx = Math.max(7, limiteDer + 1);
+        int totalNecesarias = maxIdx - minIdx + 1;
+
+        int numCeldas;
+        int inicioIndice;
+
+        if (totalNecesarias <= MAX_CELDAS) {
+            numCeldas = Math.max(9, totalNecesarias);
+            inicioIndice = minIdx;
+        } else {
+            numCeldas = MAX_CELDAS;
+            int cabezal = cinta.getPosicionCabezal();
+            inicioIndice = cabezal - 7;
+            if (inicioIndice < minIdx) {
+                inicioIndice = minIdx;
             }
-        });
+            if (inicioIndice + MAX_CELDAS - 1 > maxIdx) {
+                inicioIndice = maxIdx - MAX_CELDAS + 1;
+            }
+        }
+
+        dibujar(cinta, inicioIndice, numCeldas);
     }
 
     public void limpiar() {
-        cinta = null;
-        vista.getAccessibleContext().setAccessibleDescription("No hay una cadena cargada.");
-        vista.revalidate();
-        vista.repaint();
-        desplazamiento.getHorizontalScrollBar().setValue(0);
-    }
+        getAccessibleContext().setAccessibleDescription(
+            "No hay una cadena cargada."
+        );
+        flechaCabezal.setVisible(false);
 
-    private final class VistaCinta extends JPanel implements Scrollable {
-        private final CeldaCinta celda = new CeldaCinta();
+        int numCeldas = 9;
+        int inicioIndice = -1;
+        int anchoTotal = anchoTotal(numCeldas);
+        int startX = (ANCHO_PANEL - anchoTotal) / 2;
 
-        private VistaCinta() {
-            getAccessibleContext().setAccessibleName("Cinta y posición del cabezal");
-        }
-
-        private int anchoCeldas() {
-            long celdas = cinta == null ? 9L
-                    : (long) cinta.getLimiteDerecho() - cinta.getLimiteIzquierdo() + 1;
-            return (int) Math.min(Integer.MAX_VALUE - 32L, celdas * CeldaCinta.ANCHO);
-        }
-
-        private int margenHorizontal() {
-            return Math.max(16, (getWidth() - anchoCeldas()) / 2);
-        }
-
-        @Override
-        public Dimension getPreferredSize() {
-            return new Dimension(anchoCeldas() + 32, CeldaCinta.ALTO + 24);
-        }
-
-        @Override
-        public Dimension getPreferredScrollableViewportSize() {
-            return getPreferredSize();
-        }
-
-        @Override
-        public int getScrollableUnitIncrement(Rectangle visible, int orientacion, int direccion) {
-            return CeldaCinta.ANCHO;
-        }
-
-        @Override
-        public int getScrollableBlockIncrement(Rectangle visible, int orientacion, int direccion) {
-            return Math.max(CeldaCinta.ANCHO, visible.width - CeldaCinta.ANCHO);
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportWidth() {
-            return getParent() != null && getParent().getWidth() >= getPreferredSize().width;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportHeight() {
-            return true;
-        }
-
-        @Override
-        protected void paintComponent(Graphics grafico) {
-            super.paintComponent(grafico);
-            Graphics2D dibujo = (Graphics2D) grafico.create();
-            try {
-                dibujo.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                dibujo.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                Rectangle visible = grafico.getClipBounds();
-                int margen = margenHorizontal();
-                int inicio = Math.max(0, (visible.x - margen) / CeldaCinta.ANCHO);
-                int fin = (visible.x + visible.width - margen) / CeldaCinta.ANCHO;
-                int izquierda = cinta == null ? -1 : cinta.getLimiteIzquierdo();
-                int ultima = cinta == null ? 8 : cinta.getLimiteDerecho() - izquierda;
-                int y = Math.max(8, (getHeight() - CeldaCinta.ALTO) / 2);
-                for (int celdaVisible = inicio; celdaVisible <= Math.min(fin, ultima); celdaVisible++) {
-                    int indice = izquierda + celdaVisible;
-                    celda.pintar(dibujo, margen + celdaVisible * CeldaCinta.ANCHO, y, indice,
-                            cinta == null ? Simbolo.BLANCO : cinta.leer(indice),
-                            cinta != null && indice == cinta.getPosicionCabezal());
-                }
-            } finally {
-                dibujo.dispose();
+        for (int i = 0; i < MAX_CELDAS; i++) {
+            if (i < numCeldas) {
+                int indiceCinta = inicioIndice + i;
+                int x = startX + i * (CeldaCinta.ANCHO + CeldaCinta.ESPACIADO);
+                posicionarCelda(i, x, indiceCinta, Simbolo.BLANCO, false);
+            } else {
+                celdas[i].setVisible(false);
+                indices[i].setVisible(false);
             }
         }
+        repaint();
+    }
+
+    private void dibujar(Cinta cinta, int inicioIndice, int numCeldas) {
+        int startX = (ANCHO_PANEL - anchoTotal(numCeldas)) / 2;
+        boolean flechaPosicionada = false;
+
+        for (int i = 0; i < MAX_CELDAS; i++) {
+            if (i < numCeldas) {
+                int indiceCinta = inicioIndice + i;
+                int x = startX + i * (CeldaCinta.ANCHO + CeldaCinta.ESPACIADO);
+                boolean esCabezal = indiceCinta == cinta.getPosicionCabezal();
+                posicionarCelda(
+                    i,
+                    x,
+                    indiceCinta,
+                    cinta.leer(indiceCinta),
+                    esCabezal
+                );
+
+                if (esCabezal) {
+                    flechaCabezal.setBounds(x + 12, Y_FLECHA, 30, 20);
+                    flechaCabezal.setVisible(true);
+                    flechaPosicionada = true;
+                }
+            } else {
+                celdas[i].setVisible(false);
+                indices[i].setVisible(false);
+            }
+        }
+
+        if (!flechaPosicionada) {
+            flechaCabezal.setVisible(false);
+        }
+        repaint();
+    }
+
+    private void posicionarCelda(
+        int indiceVisual,
+        int x,
+        int indiceCinta,
+        Simbolo simbolo,
+        boolean cabezal
+    ) {
+        celdas[indiceVisual].setBounds(
+            x,
+            Y_CELDA,
+            CeldaCinta.ANCHO,
+            CeldaCinta.ALTO
+        );
+        celdas[indiceVisual].actualizar(simbolo, cabezal);
+        celdas[indiceVisual].setVisible(true);
+
+        indices[indiceVisual].setBounds(
+            x - 3,
+            Y_INDICE,
+            CeldaCinta.ANCHO + 6,
+            18
+        );
+        indices[indiceVisual].setText(String.valueOf(indiceCinta));
+        indices[indiceVisual].setVisible(true);
+    }
+
+    private int anchoTotal(int numCeldas) {
+        return (
+            numCeldas * CeldaCinta.ANCHO +
+            (numCeldas - 1) * CeldaCinta.ESPACIADO
+        );
     }
 }

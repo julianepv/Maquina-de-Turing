@@ -131,8 +131,8 @@ retraso visual están pensados para observar y explicar cada paso.
 ## 8. Recorrido sugerido para la demostración
 
 1. Carga `ab` y reproduce los cinco pasos de la tabla anterior.
-2. Carga `aaabbb`, ejecuta automáticamente, cambia la velocidad y pausa para
-   señalar el estado, el cabezal y la transición en el historial.
+2. Carga `aaabbb`, ejecuta automáticamente a velocidad predeterminada (700 ms)
+   y pausa para señalar el estado, el cabezal y la transición en el historial.
 3. Ejecuta `aab`: la máquina acaba buscando una `b` que no existe.
 4. Ejecuta `abab`: la cantidad coincide, pero el orden causa rechazo en `q3`.
 5. Intenta cargar `aabbc` y luego una entrada vacía para mostrar la validación.

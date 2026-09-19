@@ -1,90 +1,57 @@
 package turing.interfaz.paneles;
 
-import java.awt.Dimension;
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionListener;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JSlider;
-import javax.swing.event.ChangeListener;
 
-/** Expone acciones de ejecución y el intervalo de tiempo elegido por el usuario. */
+/** Botones de control de la simulación. */
 public final class PanelControles extends JPanel {
+
+    private static final int ANCHO_BOTON = 125;
+    private static final int ALTO_BOTON = 40;
+
     private final JButton botonPaso = new JButton("Paso");
     private final JButton botonEjecutar = new JButton("Ejecutar");
     private final JButton botonPausar = new JButton("Pausar");
     private final JButton botonReiniciar = new JButton("Reiniciar");
-    private final JSlider velocidad = new JSlider(50, 1500, 500);
-    private final JLabel etiquetaIntervalo = new JLabel();
 
     public PanelControles() {
-        setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-        JButton[] botones = {botonPaso, botonEjecutar, botonPausar, botonReiniciar};
-        int ancho = 100;
-        int alto = 34;
-        for (JButton boton : botones) {
-            boton.setFont(boton.getFont().deriveFont(Font.PLAIN, 13f));
-            ancho = Math.max(ancho, boton.getPreferredSize().width);
-            alto = Math.max(alto, boton.getPreferredSize().height);
-        }
-        Dimension tamano = new Dimension(ancho, alto);
-        for (int indice = 0; indice < botones.length; indice++) {
-            if (indice > 0) {
-                add(Box.createHorizontalStrut(indice == 3 ? 24 : 8));
-            }
-            JButton boton = botones[indice];
-            boton.setPreferredSize(tamano);
-            boton.setMinimumSize(tamano);
-            boton.setMaximumSize(tamano);
+        setLayout(null);
+        setBackground(Color.WHITE);
+
+        Font fuente = new Font("Tahoma", Font.BOLD, 14);
+        JButton[] botones = {
+            botonPaso,
+            botonEjecutar,
+            botonPausar,
+            botonReiniciar,
+        };
+        int[] posicionesX = { 200, 350, 500, 650 };
+
+        for (int i = 0; i < botones.length; i++) {
+            JButton boton = botones[i];
+            boton.setBounds(posicionesX[i], 0, ANCHO_BOTON, ALTO_BOTON);
+            boton.setFont(fuente);
+            boton.setForeground(Color.BLACK);
+            boton.setFocusPainted(false);
             add(boton);
         }
 
-        botonPaso.setToolTipText("Aplica exactamente una transición de la máquina.");
-        botonEjecutar.setToolTipText("Continúa automáticamente hasta aceptar o rechazar.");
-        botonPausar.setToolTipText("Pausa la ejecución sin perder el paso actual.");
-        botonReiniciar.setToolTipText("Vuelve a la entrada original y borra el historial.");
+        botonPaso.setToolTipText("Ejecuta una sola transición.");
+        botonEjecutar.setToolTipText("Ejecuta la máquina automáticamente.");
+        botonPausar.setToolTipText("Pausa la ejecución automática.");
+        botonReiniciar.setToolTipText(
+            "Reinicia la simulación con la cadena original."
+        );
+
         botonPaso.setMnemonic('P');
         botonEjecutar.setMnemonic('E');
         botonPausar.setMnemonic('A');
         botonReiniciar.setMnemonic('R');
 
-        add(Box.createHorizontalStrut(24));
-        add(Box.createHorizontalGlue());
-        JLabel etiquetaVelocidad = new JLabel("Velocidad:");
-        etiquetaVelocidad.setFont(etiquetaVelocidad.getFont().deriveFont(Font.PLAIN, 13f));
-        etiquetaVelocidad.setLabelFor(velocidad);
-        add(etiquetaVelocidad);
-        add(Box.createHorizontalStrut(8));
-
-        velocidad.getAccessibleContext().setAccessibleName("Intervalo en milisegundos entre pasos");
-        velocidad.setOpaque(false);
-        velocidad.setToolTipText("Tiempo entre pasos: 50 ms (más rápido) a 1500 ms (más lento).");
-        Dimension tamanoVelocidad = new Dimension(140, velocidad.getPreferredSize().height);
-        velocidad.setPreferredSize(tamanoVelocidad);
-        velocidad.setMinimumSize(tamanoVelocidad);
-        velocidad.setMaximumSize(tamanoVelocidad);
-        velocidad.addChangeListener(evento -> actualizarIntervalo());
-        add(velocidad);
-        add(Box.createHorizontalStrut(8));
-
-        etiquetaIntervalo.setFont(etiquetaIntervalo.getFont().deriveFont(Font.PLAIN, 12f));
-        Dimension tamanoIntervalo = new Dimension(
-                etiquetaIntervalo.getFontMetrics(etiquetaIntervalo.getFont()).stringWidth("1500 ms"),
-                etiquetaIntervalo.getFontMetrics(etiquetaIntervalo.getFont()).getHeight());
-        etiquetaIntervalo.setPreferredSize(tamanoIntervalo);
-        etiquetaIntervalo.setMinimumSize(tamanoIntervalo);
-        etiquetaIntervalo.setMaximumSize(tamanoIntervalo);
-        add(etiquetaIntervalo);
-
-        actualizarIntervalo();
         actualizarDisponibilidad(false, false, false);
-    }
-
-    private void actualizarIntervalo() {
-        etiquetaIntervalo.setText(velocidad.getValue() + " ms");
     }
 
     public void alPaso(ActionListener accion) {
@@ -103,15 +70,11 @@ public final class PanelControles extends JPanel {
         botonReiniciar.addActionListener(accion);
     }
 
-    public void alCambiarVelocidad(ChangeListener accion) {
-        velocidad.addChangeListener(accion);
-    }
-
-    public int getRetardoMilisegundos() {
-        return velocidad.getValue();
-    }
-
-    public void actualizarDisponibilidad(boolean cargada, boolean ejecutando, boolean terminada) {
+    public void actualizarDisponibilidad(
+        boolean cargada,
+        boolean ejecutando,
+        boolean terminada
+    ) {
         boolean puedeAvanzar = cargada && !ejecutando && !terminada;
         botonPaso.setEnabled(puedeAvanzar);
         botonEjecutar.setEnabled(puedeAvanzar);

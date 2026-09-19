@@ -20,7 +20,6 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.event.TableModelEvent;
-import javax.swing.text.JTextComponent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,8 +53,9 @@ class ControladorSimulacionTest {
             PanelHistorial historial = new PanelHistorial();
             tabla = unico(historial, JTable.class);
             errores = new ArrayList<>();
+            // Se usa un retardo bajo (50 ms) para ejecutar las pruebas de integración con agilidad
             controlador = new ControladorSimulacion(motor, entrada, controles,
-                    new PanelCinta(), estado, historial, errores::add);
+                    new PanelCinta(), estado, historial, errores::add, 50);
         });
     }
 
@@ -69,9 +69,33 @@ class ControladorSimulacionTest {
     }
 
     @Test
+    void temporizadorPorDefectoUsaRetardoFijoPredeterminado() throws Exception {
+        enSwing(() -> {
+            ControladorSimulacion ctrl = new ControladorSimulacion(motor, entrada, controles,
+                    new PanelCinta(), estado, new PanelHistorial(), errores::add);
+            assertEquals(700, ctrl.getRetardoMilisegundos());
+            ctrl.detener();
+        });
+    }
+
+    @Test
+    void controlesNoContieneSliderNiControlManualDeVelocidad() throws Exception {
+        enSwing(() -> {
+            assertTrue(componentes(controles, JSlider.class).isEmpty(),
+                    "PanelControles no debe incluir ningún JSlider de velocidad");
+            assertEquals(4, componentes(controles, JButton.class).size(),
+                    "PanelControles solo debe tener 4 botones: Paso, Ejecutar, Pausar, Reiniciar");
+            assertEquals("Paso", boton(controles, "Paso").getText());
+            assertEquals("Ejecutar", boton(controles, "Ejecutar").getText());
+            assertEquals("Pausar", boton(controles, "Pausar").getText());
+            assertEquals("Reiniciar", boton(controles, "Reiniciar").getText());
+        });
+    }
+
+    @Test
     void alIniciarSoloPermiteCargarUnaCadena() throws Exception {
         enSwing(() -> {
-            assertTrue(boton(entrada, "Cargar cadena").isEnabled());
+            assertTrue(boton(entrada, "Cargar").isEnabled());
             assertTrue(unico(entrada, JTextField.class).isEditable());
             assertFalse(boton(controles, "Paso").isEnabled());
             assertFalse(boton(controles, "Ejecutar").isEnabled());
@@ -80,7 +104,7 @@ class ControladorSimulacionTest {
             assertFalse(motor.hayCadenaCargada());
             assertEquals(0, tabla.getRowCount());
 
-            boton(entrada, "Cargar cadena").doClick(0);
+            boton(entrada, "Cargar").doClick(0);
             assertEquals(1, errores.size());
             assertFalse(errores.get(0).isBlank());
             assertFalse(motor.hayCadenaCargada());
@@ -109,10 +133,13 @@ class ControladorSimulacionTest {
             assertEquals(1, tabla.getRowCount());
             assertEquals(1L, tabla.getValueAt(0, tabla.getColumn("Paso").getModelIndex()));
             assertFalse(tabla.isCellEditable(0, 0));
-            assertEquals(motor.getHistorial().getPasos().get(0).notacion(),
-                    unico(estado, JTextField.class).getText());
+            assertEquals(motor.getHistorial().getPasos().get(0).notacion().replace(",", ", ").replace(" = ", " → "),
+                    componentes(estado, JLabel.class).stream()
+                            .filter(etiqueta -> "Última transición ejecutada".equals(
+                                    etiqueta.getAccessibleContext().getAccessibleName()))
+                            .findFirst().orElseThrow().getText());
             assertTrue(componentes(estado, JLabel.class).stream()
-                    .anyMatch(etiqueta -> etiqueta.getText().equals("Estado actual: q1")));
+                    .anyMatch(etiqueta -> etiqueta.getText().equals("Estado: q1")));
             assertTrue(errores.isEmpty());
         });
     }
@@ -125,7 +152,7 @@ class ControladorSimulacionTest {
             MaquinaTuring maquinaAnterior = motor.getMaquina();
 
             entrada.setCadena("aabbc");
-            boton(entrada, "Cargar cadena").doClick(0);
+            boton(entrada, "Cargar").doClick(0);
 
             assertEquals(1, errores.size());
             assertFalse(errores.get(0).isBlank());
@@ -160,15 +187,13 @@ class ControladorSimulacionTest {
         enSwing(() -> {
             cargar("aabb");
             observarFinalizacion(terminada);
-            unico(controles, JSlider.class).setValue(50);
-            assertEquals(50, controles.getRetardoMilisegundos());
 
             boton(controles, "Ejecutar").doClick(0);
 
             assertTrue(boton(controles, "Pausar").isEnabled());
             assertFalse(boton(controles, "Paso").isEnabled());
             assertFalse(boton(controles, "Ejecutar").isEnabled());
-            assertFalse(boton(entrada, "Cargar cadena").isEnabled());
+            assertFalse(boton(entrada, "Cargar").isEnabled());
             assertFalse(unico(entrada, JTextField.class).isEditable());
 
             MaquinaTuring maquinaEnEjecucion = motor.getMaquina();
@@ -188,7 +213,7 @@ class ControladorSimulacionTest {
             assertFalse(boton(controles, "Pausar").isEnabled());
             assertTrue(boton(controles, "Reiniciar").isEnabled());
             assertTrue(unico(entrada, JTextField.class).isEditable());
-            assertTrue(componentes(estado, JTextComponent.class).stream()
+            assertTrue(componentes(estado.getPanelResultado(), JLabel.class).stream()
                     .filter(campo -> "Resultado de la simulación".equals(
                             campo.getAccessibleContext().getAccessibleName()))
                     .anyMatch(campo -> campo.getText().contains("Cadena aceptada")));
@@ -211,7 +236,6 @@ class ControladorSimulacionTest {
                 boton(controles, "Pausar").doClick(0);
                 pausada.countDown();
             });
-            unico(controles, JSlider.class).setValue(50);
             boton(controles, "Ejecutar").doClick(0);
         });
 
@@ -247,7 +271,6 @@ class ControladorSimulacionTest {
                 boton(controles, "Reiniciar").doClick(0);
                 reiniciada.countDown();
             });
-            unico(controles, JSlider.class).setValue(50);
             boton(controles, "Ejecutar").doClick(0);
         });
 
@@ -260,7 +283,7 @@ class ControladorSimulacionTest {
 
     private void cargar(String cadena) {
         entrada.setCadena(cadena);
-        boton(entrada, "Cargar cadena").doClick(0);
+        boton(entrada, "Cargar").doClick(0);
     }
 
     private void comprobarReinicio(String cadena) {

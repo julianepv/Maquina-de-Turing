@@ -29,8 +29,9 @@ vez; la aplicación empaquetada no requiere bibliotecas externas.
 1. Escribe una cadena, por ejemplo `aabb`, y pulsa **Cargar** o Enter.
 2. Pulsa **Paso** para realizar una transición. Observa la escritura, el
    movimiento del cabezal, el estado y la fila nueva del historial.
-3. Pulsa **Ejecutar** para continuar automáticamente. El control de intervalo
-   establece los milisegundos entre pasos; un valor menor significa más velocidad.
+3. Pulsa **Ejecutar** para continuar automáticamente. La simulación utiliza
+   un intervalo predeterminado de 700 ms por transición para permitir apreciar
+   claramente cada operación del autómata.
 4. Usa **Pausar** para detener la ejecución y continuar después, incluso paso a paso.
 5. Al finalizar se muestra **Cadena aceptada** o **Cadena rechazada**.
 6. **Reiniciar** restaura la cadena original, el cabezal, `q0` y el historial vacío.
